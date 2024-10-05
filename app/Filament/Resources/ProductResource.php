@@ -19,7 +19,8 @@ class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationGroup = 'Shop';
+    protected static ?string $navigationIcon = 'heroicon-o-squares-2x2';
 
     public static function form(Form $form): Form
     {
@@ -34,34 +35,23 @@ class ProductResource extends Resource
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn(callable $set, ?string $state) => $set('slug', Str::slug($state)))
                                     ->required(),
+                                Forms\Components\FileUpload::make('images')
+                                    ->columnSpanFull()
+                                    ->image()
+                                    ->maxFiles(5)
+                                    ->multiple(),
                                 Forms\Components\MarkdownEditor::make('description')
                                     ->columnSpanFull(),
-                                Forms\Components\TextInput::make('price')
-                                    ->required()
-                                    ->numeric()
-                                    ->prefix('$'),
                             ])
                     ])->columnSpan(2),
                 Forms\Components\Group::make()
                     ->schema([
-                        Forms\Components\Section::make('SEO')
-                            ->schema([
-                                Forms\Components\FileUpload::make('images')
-                                    ->columnSpanFull()
-                                    ->image()
-                                    ->multiple(),
-                                Forms\Components\Select::make('category')
-                                    ->required(),
-                                Forms\Components\Select::make('brand')
-                                    ->required(),
-                                Forms\Components\TextInput::make('slug')
-                                    ->unique(Product::class, 'slug', ignoreRecord: true)
-                                    ->disabled()
-                                    ->dehydrated()
-                                    ->required(),
-                            ]),
                         Forms\Components\Section::make('Status')
                             ->schema([
+                                Forms\Components\TextInput::make('price')
+                                    ->required()
+                                    ->numeric()
+                                    ->prefix('$'),
                                 Forms\Components\TextInput::make('stock')
                                     ->required()
                                     ->numeric()
@@ -69,6 +59,20 @@ class ProductResource extends Resource
                                 Forms\Components\Toggle::make('published')
                                     ->required(),
                                 Forms\Components\Toggle::make('is_featured')
+                                    ->required(),
+                            ]),
+                        Forms\Components\Section::make('SEO')
+                            ->schema([
+                                Forms\Components\TextInput::make('slug')
+                                    ->unique(Product::class, 'slug', ignoreRecord: true)
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->required(),
+                                Forms\Components\Select::make('category_id')
+                                    ->relationship('category', 'name')
+                                    ->required(),
+                                Forms\Components\Select::make('brand_id')
+                                    ->relationship('brand', 'name')
                                     ->required(),
                             ])
                     ])->columnSpan(1),
@@ -109,14 +113,11 @@ class ProductResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                    ->after(function (Product $record) {
-                        if ($record->galery) {
-                            foreach ($record->galery as $ph) Storage::disk('public')->delete($ph);
-                        }
-                    }),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
